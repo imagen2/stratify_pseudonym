@@ -49,19 +49,21 @@ from re import findall
 from random import shuffle
 from jellyfish import damerau_levenshtein_distance
 from damm import encode
+from csv import DictReader
 
+IMAGEN_PSC_PATH = '/imagen/psc2psc.csv'
 
 DIGITS = 5
 MIN_DISTANCE = 3
 PREFIXES = {
-    '21': 600,
-    '20': 400,
-    '31': 600,
-    '30': 400,
+    '010000': 50,   # additional LONDON controls (not Imagen subjects)
+    '010001': 600,  # LONDON patients
+    '090000': 400,  # SOUTHAMPTON controls
+    '090001': 600,  # SOUTHAMPTON patients
 }
 
 
-def code_generator(prefixes, digits, min_distance):
+def code_generator(prefixes, digits, min_distance, existing=set()):
     """Generate distant enough numeric codes (Damerau-Levenshtein distance).
 
     The numeric codes are made of:
@@ -81,6 +83,9 @@ def code_generator(prefixes, digits, min_distance):
     min_distance : int
         Minimal Damerau-Levenshtein distance between generated strings.
 
+    existing : set
+        Set of existing, previously assigned PSC1 codes to take into account.
+
     Returns
     -------
     dict
@@ -88,18 +93,17 @@ def code_generator(prefixes, digits, min_distance):
         Values represent the egenerated codes for each prefix.
 
     """
-    lexicode = set()
+    lexicode = existing
     result = {x: [] for x in prefixes.keys()}
 
     # avoid numbers starting with 0
     # for example for 5 digits, choose numbers between 9999 + 1 and 99999
-    min_value = 0
-    i = 1
-    while i < digits:
-        min_value = min_value * 10 + 9
-        i += 1
-    max_value = min_value * 10 + 9
-    min_value += 1
+    min_value = 10 ** (digits - 1)
+    max_value = (10 ** digits) - 1
+
+    # also avoid numbers starting with 1, 2
+    # they are already used by Imagen so let's use something different here!
+    min_value *= 3
 
     # avoid more than 2 repeated consecutive characters
     candidates = list(x for x in range(min_value, max_value + 1)
@@ -114,20 +118,29 @@ def code_generator(prefixes, digits, min_distance):
                 # prepend prefix, append Damm decimal check digit
                 code = i + str(encode(prefix + i))
                 # ignore prefix when calculating distance to previous codes
-                if not lexicode or min(damerau_levenshtein_distance(code, l)
-                                       for l in lexicode) >= min_distance:
-                    lexicode.add(code)
-                    result[prefix].append(code)
-                    break  # from current inner loop over prefix
+                if code in lexicode:
+                    continue
+                else:
+                    code_min_distance = min((damerau_levenshtein_distance(code, l)
+                                             for l in lexicode),
+                                            default=min_distance)  # empty set
+                    if code_min_distance >= min_distance:
+                        lexicode.add(code)
+                        result[prefix].append(code)
+                        yield prefix, code
+                        break  # from current inner loop over prefix
 
-    return result
+
+def imagen_codes(path):
+     with open(path, 'r') as csvfile:
+        reader = DictReader(csvfile, delimiter='=')
+        return set(row['PSC1'][6:] for row in reader)
 
 
 def main():
-    result = code_generator(PREFIXES, DIGITS, MIN_DISTANCE)
-    for prefix, codes in result.items():
-        for code in codes:
-            print(prefix + code)
+    existing = imagen_codes(IMAGEN_PSC_PATH)
+    for prefix, code in code_generator(PREFIXES, DIGITS, MIN_DISTANCE, existing):
+        print(prefix + code)
 
 
 if __name__ == '__main__':
