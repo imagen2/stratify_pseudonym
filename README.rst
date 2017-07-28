@@ -8,4 +8,4 @@ We generated PSC1 codes on 20 July 2017 using this command::
 
 We generated PSC2 codes on 28 July 2017 using this command::
 
-     ./stratify_generate_psc2.py > stratify_psc2_2017-07-28.txt
+     ./stratify_generate_psc2.py | sort > stratify_psc2_2017-07-28.txt
