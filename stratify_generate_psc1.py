@@ -29,11 +29,11 @@
 # The fact that you are presently reading this means that you have had
 # knowledge of the CeCILL license and that you accept its terms.
 
-"""Generate codes to pseudonymize Stratify data.
+"""Generate codes to pseudonymize Stratify B data.
 
 The algorithm used here is certainly brain-dead. This is not reusable code
 but is good enough for a one-shot run. I spent 10 minutes writing and it
-took ~ 3 days to generate PSC1 codes for the Stratify project.
+took ~ 3 days to generate PSC1 codes for the Stratify B project.
 
 Notes
 -----
@@ -97,7 +97,7 @@ def code_generator(prefixes, digits, min_distance, existing=set()):
     result = {x: [] for x in prefixes.keys()}
 
     # avoid numbers starting with 0
-    # for example for 5 digits, choose numbers between 9999 + 1 and 99999
+    # for example for 5 digits, choose numbers between 10000 and 99999
     min_value = 10 ** (digits - 1)
     max_value = (10 ** digits) - 1
 
